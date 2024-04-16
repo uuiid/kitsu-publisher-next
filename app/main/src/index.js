@@ -50,6 +50,18 @@ if (isDevelopment) {
 let mainWindow = null
 
 const createWindow = async () => {
+
+  const filter = {urls: ['https://192.168.20.69/*']};
+  session.defaultSession.webRequest.onHeadersReceived(filter, (details,callback) => {
+    console.log("details",details.responseHeaders);
+    if(details.responseHeaders && details.responseHeaders['Set-Cookie']){
+      for(let i = 0;i < details.responseHeaders['Set-Cookie'].length;i++) 
+      details.responseHeaders['Set-Cookie'][i] += ";SameSite=None;Secure";
+    }
+    
+    callback({ responseHeaders: details.responseHeaders});
+  }) 
+
   session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
     // set custom User-Agent in requestHeaders
     details.requestHeaders['User-Agent'] = `Kitsu publisher ${app.getVersion()}`
@@ -285,6 +297,12 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+  // On certificate error we disable default behaviour (stop loading the page)
+  // and we then say "it is all fine - true" to the callback
+  event.preventDefault();
+  callback(true);
+});
 
 app
   .whenReady()
